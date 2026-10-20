@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แบบทดสอบวิชาเทคโนโลยี (วิทยาการคำนวณ) ม.3</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+    pre { font-family: 'Courier New', Courier, monospace; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-8 px-4">
+
+  <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200">
+    <!-- ส่วนหัวเว็บไซต์ -->
+    <div class="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white text-center">
+      <h1 class="text-2xl md:text-3xl font-bold">แบบทดสอบวิชาเทคโนโลยี (วิทยาการคำนวณ)</h1>
+      <p class="mt-2 text-blue-100">ระดับชั้นมัธยมศึกษาปีที่ 3 (จำนวน 10 ข้อ | คะแนนเต็ม 10 คะแนน)</p>
+    </div>
+
+    <form id="quizForm" class="p-6 md:p-8 space-y-8">
+      <!-- ส่วนที่ 1: ข้อมูลนักเรียน -->
+      <div class="bg-blue-50/60 p-6 rounded-xl border border-blue-100 space-y-4">
+        <h2 class="text-lg font-semibold text-blue-900 border-b border-blue-200 pb-2">
+          ส่วนที่ 1: ข้อมูลผู้เข้าสอบ
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ <span class="text-red-500">*</span></label>
+            <input type="text" id="firstName" required placeholder="กรอกชื่อ (ไม่ต้องใส่คำนำหน้า)" 
+              class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">นามสกุล <span class="text-red-500">*</span></label>
+            <input type="text" id="lastName" required placeholder="กรอกนามสกุล" 
+              class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">ห้องเรียน (ม.3/1 - ม.3/12) <span class="text-red-500">*</span></label>
+            <select id="room" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white transition">
+              <option value="" disabled selected>-- เลือกห้องเรียน --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">เลขที่ (1 - 40) <span class="text-red-500">*</span></label>
+            <select id="number" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white transition">
+              <option value="" disabled selected>-- เลือกเลขที่ --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ส่วนที่ 2: ข้อสอบ 10 ข้อ -->
+      <div class="space-y-6">
+        <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
+          ส่วนที่ 2: คำถามปรนัย (เลือกคำตอบที่ถูกต้องที่สุดเพียงข้อเดียว)
+        </h2>
+        <div id="questionsContainer" class="space-y-6"></div>
+      </div>
+
+      <!-- ปุ่มส่งคำตอบ -->
+      <div class="pt-4">
+        <button type="submit" id="submitBtn" 
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-xl shadow-md hover:shadow-lg transition duration-200 text-lg cursor-pointer">
+          ส่งกระดาษคำตอบ
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // =========================================================================
+    // นำ Web App URL ที่ได้จาก Google Apps Script มาวางแทนที่ข้อความด้านล่างนี้
+    // =========================================================================
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywZbQdluM2055eIMuAM3drXtfUvg0BAvSMU4LCvyheSpFB2Ja6kIZ0GMlWLgZ_7hYD/exec';
+
+    // สร้างตัวเลือกห้อง 1 - 12 และเลขที่ 1 - 40 อัตโนมัติ
+    const roomSelect = document.getElementById('room');
+    for (let r = 1; r <= 12; r++) {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = `ม.3/${r}`;
+      roomSelect.appendChild(opt);
+    }
+
+    const numberSelect = document.getElementById('number');
+    for (let n = 1; n <= 40; n++) {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = `เลขที่ ${n}`;
+      numberSelect.appendChild(opt);
+    }
+
+    // ข้อมูลข้อสอบทั้ง 10 ข้อ
+    const questions = [
+      {
+        q: "1. นักเรียนต้องการพัฒนาระบบรดน้ำต้นไม้อัตโนมัติที่สั่งงานผ่านสมาร์ทโฟน โดยให้ระบบทำงานเมื่อความชื้นในดินต่ำกว่า 30% และอุณหภูมิอากาศสูงกว่า 35°C อุปกรณ์ในข้อใดทำหน้าที่เป็นส่วนรับข้อมูล (Input) และส่วนประมวลผล (Controller) ของระบบ IoT นี้ตามลำดับ",
+        options: [
+          "ก. ปั๊มน้ำขนาดเล็ก และ โมดูลเชื่อมต่อสัญญาณ Wi-Fi",
+          "ข. เซนเซอร์วัดความชื้นในดิน และ บอร์ดไมโครคอนโทรลเลอร์",
+          "ค. สมาร์ทโฟนของผู้ใช้งาน และ เซนเซอร์วัดอุณหภูมิอากาศ",
+          "ง. บอร์ดไมโครคอนโทรลเลอร์ และ รีเลย์ควบคุมการเปิด-ปิดไฟ"
+        ],
+        correct: 1
+      },
+      {
+        q: "2. ในการรวบรวมข้อมูลพฤติกรรมการอ่านหนังสือของนักเรียนชั้น ม.3 เพื่อนำมาวิเคราะห์หาแนวโน้มความสนใจ พบว่าชุดข้อมูลที่ได้มีค่าอายุของนักเรียนบางคนเป็น 150 ปี และบางแถวไม่มีการระบุประเภทหนังสือที่ชอบ กระบวนการใดที่ผู้วิเคราะห์ต้องดำเนินการเป็นอันดับแรกก่อนนำข้อมูลไปสร้างกราฟ",
+        options: [
+          "ก. การทำข้อมูลให้เป็นภาพ (Data Visualization)",
+          "ข. การเก็บรวบรวมข้อมูลใหม่ทั้งหมด (Data Collection)",
+          "ค. การทำความสะอาดและเตรียมข้อมูลให้พร้อมใช้งาน (Data Cleansing)",
+          "ง. การวิเคราะห์ข้อมูลเชิงทำนาย (Predictive Analytics)"
+        ],
+        correct: 2
+      },
+      {
+        q: "3. กำหนดส่วนของโปรแกรมภาษา Python สำหรับคัดกรองคะแนนสอบดังนี้ เมื่อโปรแกรมทำงานเสร็จสิ้น จำนวนสมาชิกในรายการ passed และผลรวมของสมาชิกทั้งหมดใน passed มีค่าเท่าใด",
+        code: "scores = [45, 78, 52, 89, 60, 49]\npassed = []\nfor s in scores:\n    if s >= 50 and s < 80:\n        passed.append(s)",
+        options: [
+          "ก. จำนวน 3 ตัว และมีผลรวมเท่ากับ 190",
+          "ข. จำนวน 4 ตัว และมีผลรวมเท่ากับ 279",
+          "ค. จำนวน 3 ตัว และมีผลรวมเท่ากับ 199",
+          "ง. จำนวน 2 ตัว และมีผลรวมเท่ากับ 138"
+        ],
+        correct: 0
+      },
+      {
+        q: "4. ร้านค้าออนไลน์แห่งหนึ่งต้องการนำเสนอข้อมูล 'ความสัมพันธ์ระหว่างจำนวนเงินที่ใช้โฆษณาต่อวันกับยอดขายสินค้าที่ได้รับตลอดระยะเวลา 60 วัน' เพื่อดูว่าเมื่อเพิ่มงบโฆษณาแล้วยอดขายมีทิศทางเพิ่มขึ้นหรือไม่ แผนภูมิรูปแบบใดเหมาะสมที่สุดในการนำเสนอข้อมูลชุดนี้",
+        options: [
+          "ก. แผนภูมิวงกลม (Pie Chart)",
+          "ข. แผนภูมิแท่งเปรียบเทียบ (Bar Chart)",
+          "ค. แผนภูมิการกระจาย (Scatter Plot)",
+          "ง. แผนภูมิเรดาร์ (Radar Chart)"
+        ],
+        correct: 2
+      },
+      {
+        q: "5. ในการออกแบบฟังก์ชันคำนวณค่าจัดส่งสินค้า โดยมีเงื่อนไขว่า 'ถ้าน้ำหนักสินค้าไม่เกิน 2 กิโลกรัม คิดค่าส่งเหมาจ่าย 40 บาท แต่ถ้าน้ำหนักเกิน 2 กิโลกรัม จะคิดค่าส่งเพิ่มกิโลกรัมละ 15 บาทเฉพาะส่วนที่เกินมา' หากกำหนดให้ w แทนน้ำหนักสินค้าที่มีค่ามากกว่า 2 กิโลกรัม นิพจน์การคำนวณค่าส่งในข้อใดถูกต้อง",
+        options: [
+          "ก. 40 + (w × 15)",
+          "ข. 40 + (w - 2) × 15",
+          "ค. (w - 2) × 40 + 15",
+          "ง. (w × 15) - 40"
+        ],
+        correct: 1
+      },
+      {
+        q: "6. ในขณะที่นักเรียนกำลังค้นหาข้อมูลเพื่อทำรายงาน ได้พบโพสต์ในสื่อสังคมออนไลน์ที่อ้างถึงงานวิจัยทางการแพทย์ว่า 'การดื่มน้ำมะนาวผสมโซดาอุ่นๆ ทุกเช้าสามารถฆ่าเชื้อไวรัสได้ทุกชนิด 100%' โดยมีผู้แชร์ต่อมากกว่าหมื่นครั้ง นักเรียนควรใช้วิธีการใดในการประเมินความน่าเชื่อถือของข้อมูลนี้ตามหลักการรู้เท่าทันสื่อ",
+        options: [
+          "ก. เชื่อถือได้ทันทีเนื่องจากมีจำนวนผู้แชร์และแสดงความคิดเห็นเห็นด้วยเป็นจำนวนมาก",
+          "ข. ทดลองปฏิบัติตามด้วยตนเองเป็นเวลา 1 สัปดาห์เพื่อพิสูจน์ผลลัพธ์จริง",
+          "ค. แชร์โพสต์ลงในกลุ่มเพื่อนเพื่อสอบถามความคิดเห็นจากคนส่วนใหญ่",
+          "ง. ตรวจสอบชื่อผู้โพสต์และค้นหาแหล่งอ้างอิงจากหน่วยงานทางการแพทย์ที่เป็นทางการ"
+        ],
+        correct: 3
+      },
+      {
+        q: "7. สมชายได้รับอีเมลแจ้งเตือนจากระบบธนาคารว่า 'บัญชีของท่านจะถูกระงับภายใน 24 ชั่วโมง กรุณาคลิกลิงก์เพื่อยืนยันตัวตนและกรอกรหัสผ่านพร้อมรหัส OTP ทันที' เมื่อสังเกตที่อยู่อีเมลผู้ส่งพบว่าเป็น support@bannk-security-verify.com สถานการณ์นี้จัดเป็นภัยคุกคามรูปแบบใด และควรรับมืออย่างไร",
+        options: [
+          "ก. การหลอกลวงแบบฟิชชิง (Phishing) และควรติดต่อสอบถามธนาคารผ่านช่องทางทางการโดยตรง",
+          "ข. การโจมตีด้วยแรนซัมแวร์ (Ransomware) และควรรีบคลิกลิงก์เพื่อเปลี่ยนรหัสผ่านทันที",
+          "ค. การเจาะระบบแบบสปายแวร์ (Spyware) และควรตอบกลับอีเมลเพื่อขอยกเลิกการระงับบัญชี",
+          "ง. การส่งสแปมโฆษณา (Spam) และควรส่งต่ออีเมลให้เพื่อนช่วยตรวจสอบความถูกต้องของลิงก์"
+        ],
+        correct: 0
+      },
+      {
+        q: "8. นักเรียนต้องการสร้างคลิปวิดีโอเพื่อเผยแพร่ความรู้เรื่องการคัดแยกขยะลงบนช่อง YouTube ของโรงเรียน โดยไม่ได้เปิดสร้างรายได้ นักเรียนจึงค้นหารูปภาพจากอินเทอร์เน็ตที่ระบุสัญญาอนุญาตครีเอทีฟคอมมอนส์แบบ CC BY-NC-ND นักเรียนสามารถนำภาพนี้ไปใช้งานในลักษณะใดจึงจะไม่ละเมิดลิขสิทธิ์",
+        options: [
+          "ก. นำภาพไปตัดต่อเพิ่มข้อความประกอบ และระบุชื่อเจ้าของผลงานในคำอธิบายคลิป",
+          "ข. นำภาพต้นฉบับไปใส่ประกอบในวิดีโอโดยไม่ดัดแปลงแก้ไข และระบุชื่อเจ้าของผลงานอย่างชัดเจน",
+          "ค. นำภาพต้นฉบับไปใส่ในวิดีโอได้ทันทีโดยไม่ต้องระบุแหล่งที่มา เนื่องจากใช้เพื่อการศึกษา",
+          "ง. นำภาพไปปรับเปลี่ยนสีสันให้เข้ากับธีมของโรงเรียน และส่งข้อความไปขออนุญาตผู้สร้างหลังเผยแพร่"
+        ],
+        correct: 1
+      },
+      {
+        q: "9. พิจารณารหัสจำลอง (Pseudocode) ของการทำงานระบบคำนวณแต้มสะสมต่อไปนี้ เมื่อจบการทำงานของอัลกอริทึมนี้ ค่าของตัวแปร points จะมีค่าเท่ากับเท่าใด",
+        code: "1. กำหนดให้ points = 0 และ i = 1\n2. ทำซ้ำในขณะที่ i <= 4:\n   2.1 ถ้า i หารด้วย 2 ลงตัว ให้ points = points + (i * 10)\n   2.2 มิฉะนั้น ให้ points = points + 5\n   2.3 ให้ i = i + 1",
+        options: [
+          "ก. 50",
+          "ข. 65",
+          "ค. 70",
+          "ง. 100"
+        ],
+        correct: 2
+      },
+      {
+        q: "10. ในการพัฒนาแอปพลิเคชันแจ้งซ่อมอุปกรณ์ภายในโรงเรียน นักเรียนได้แบ่งงานออกเป็นส่วนๆ ได้แก่ ระบบลงทะเบียนผู้ใช้ ระบบแจ้งพิกัดจุดชำรุด และระบบติดตามสถานะการซ่อม เพื่อให้สมาชิกในกลุ่มสามารถเขียนโปรแกรมแยกกันได้อย่างอิสระแล้วจึงนำมารวมกันในภายหลัง วิธีการดังกล่าวตรงกับองค์ประกอบใดของแนวคิดเชิงคำนวณมากที่สุด",
+        options: [
+          "ก. แนวคิดการแยกย่อย (Decomposition)",
+          "ข. แนวคิดการหารูปแบบ (Pattern Recognition)",
+          "ค. แนวคิดเชิงนามธรรม (Abstraction)",
+          "ง. การออกแบบขั้นตอนวิธี (Algorithm Design)"
+        ],
+        correct: 0
+      }
+    ];
+
+    // เรนเดอร์ข้อสอบลงในหน้าเว็บ
+    const container = document.getElementById('questionsContainer');
+    const choiceLabels = ['ก', 'ข', 'ค', 'ง'];
+
+    questions.forEach((item, index) => {
+      const qDiv = document.createElement('div');
+      qDiv.className = "p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3";
+      
+      let codeBlock = '';
+      if (item.code) {
+        codeBlock = `<pre class="bg-slate-800 text-green-300 p-4 rounded-lg text-sm overflow-x-auto my-2">${item.code}</pre>`;
+      }
+
+      let optionsHtml = item.options.map((opt, optIdx) => `
+        <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-blue-50/80 cursor-pointer border border-transparent hover:border-blue-200 transition">
+          <input type="radio" name="q${index}" value="${optIdx}" required class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500">
+          <span class="text-slate-700">${opt}</span>
+        </label>
+      `).join('');
+
+      qDiv.innerHTML = `
+        <p class="font-medium text-slate-800 leading-relaxed">${item.q}</p>
+        ${codeBlock}
+        <div class="space-y-1 pt-1">${optionsHtml}</div>
+      `;
+      container.appendChild(qDiv);
+    });
+
+    // จัดการการส่งฟอร์มไปยัง Google Sheets
+    document.getElementById('quizForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (SCRIPT_URL === 'วาง_WEB_APP_URL_ของคุณที่นี่' || !SCRIPT_URL.startsWith('https://')) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ยังไม่ได้ตั้งค่า SCRIPT_URL',
+          text: 'กรุณานำ Web App URL จาก Google Apps Script มาใส่ในโค้ดก่อนใช้งานครับ'
+        });
+        return;
+      }
+
+      let score = 0;
+      let userAnswers = [];
+
+      questions.forEach((item, index) => {
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        const ansIdx = parseInt(selected.value);
+        userAnswers.push(choiceLabels[ansIdx]);
+        if (ansIdx === item.correct) {
+          score++;
+        }
+      });
+
+      const payload = {
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        room: document.getElementById('room').value,
+        number: document.getElementById('number').value,
+        score: score,
+        answers: userAnswers
+      };
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'กำลังบันทึกข้อมูล...';
+
+      Swal.fire({
+        title: 'กำลังส่งกระดาษคำตอบ',
+        text: 'กรุณารอสักครู่...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        // ใช้ Content-Type เป็น text/plain เพื่อหลีกเลี่ยงปัญหา CORS Preflight บน GitHub Pages
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          Swal.fire({
+            icon: 'success',
+            title: 'ส่งคำตอบสำเร็จ!',
+            html: `
+              <div class="space-y-2 mt-2">
+                <p class="text-slate-700">${payload.firstName} ${payload.lastName} (ม.3/${payload.room} เลขที่ ${payload.number})</p>
+                <p class="text-2xl font-bold text-blue-600">คะแนนที่ได้: ${score} / 10 คะแนน</p>
+              </div>
+            `,
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#2563eb'
+          });
+          document.getElementById('quizForm').reset();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาดในการส่งข้อมูล',
+          text: 'ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง (' + error.message + ')'
+        });
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ส่งกระดาษคำตอบ';
+      }
+    });
+  </script>
+</body>
+</html>
